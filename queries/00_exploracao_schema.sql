@@ -16,6 +16,64 @@ Entender os dados antes de construir métricas analíticas
 e identificar riscos de duplicação ou perda de linhas.
 */
 
+/*
+GUIA DE EXPLORAÇÃO ANTES DE CRIAR MÉTRICAS
+
+Objetivo:
+Antes de calcular qualquer métrica, entender a estrutura dos dados
+e validar se os relacionamentos entre tabelas são compatíveis com
+o grain esperado.
+
+Etapas de validação:
+
+1. Volume das tabelas
+   - Contar linhas com COUNT(*).
+   - Entender se diferenças de volume são esperadas pelo grain.
+
+2. Cobertura temporal
+   - Identificar período mínimo e máximo.
+   - Verificar se períodos de borda podem estar incompletos.
+
+3. Grain de cada tabela
+   - Definir o que uma linha representa.
+   - Não assumir o grain apenas pelo nome da tabela.
+
+4. Unicidade das chaves
+   - Comparar COUNT(*), COUNT(chave) e COUNT(DISTINCT chave).
+   - Procurar duplicatas explicitamente com GROUP BY + HAVING.
+
+5. Chaves candidatas
+   - Quando nenhuma coluna é única isoladamente, testar combinações.
+   - Validar unicidade, ausência de NULL e minimalidade da combinação.
+
+6. Qualidade dos atributos
+   - Verificar NULL.
+   - Em colunas de texto, verificar também string vazia e espaços.
+   - Inspecionar exemplos dos registros problemáticos.
+
+7. Integridade entre tabelas
+   - Validar se chaves da tabela fato possuem correspondência
+     nas tabelas relacionadas.
+   - Usar LEFT JOIN + IS NULL para encontrar órfãos.
+
+8. Direção inversa do relacionamento
+   - Verificar se existem registros na tabela pai sem filhos.
+   - Entender se isso é erro, comportamento esperado ou limitação
+     do dataset.
+
+9. Riscos de JOIN
+   - Confirmar unicidade da chave do lado que será enriquecido.
+   - Identificar possibilidade de multiplicação ou perda de linhas.
+
+10. Antes da métrica
+    - Só depois dessas validações avançar para SUM, COUNT,
+      rankings, médias ou análises de negócio.
+
+Regra prática:
+Nenhuma métrica é considerada confiável apenas porque a query roda.
+Primeiro validar grain, chaves, cardinalidade, integridade e população.
+*/
+
 
 -- =========================================================
 -- 1. CONTAGEM DE LINHAS POR TABELA
