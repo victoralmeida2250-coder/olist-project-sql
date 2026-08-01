@@ -299,4 +299,131 @@ Para validar a população original, também é necessário acompanhar
 COUNT(DISTINCT chave_do_grain).
 */
 
+-- =========================================================
+-- 4. VALIDAÇÃO DO JOIN COMPLETO
+-- ORDER_ITEMS → PRODUCTS + ORDERS
+-- Objetivo:
+-- Validar se o enriquecimento simultâneo de order_items
+-- com products e orders preserva população, grain e SUM(price).
+-- =========================================================
+
+SELECT
+    COUNT(*) AS total_linhas,
+    COUNT(DISTINCT oi.order_id) AS total_order_id_distinto,
+    COUNT(DISTINCT (oi.order_id, oi.order_item_id)) AS grain_item_por_pedido,
+    COUNT(DISTINCT p.product_id) AS total_product_id_distinto,
+    SUM(oi.price) AS total_price
+FROM olist_order_items_dataset oi
+LEFT JOIN olist_products_dataset p
+    ON oi.product_id = p.product_id
+LEFT JOIN olist_orders_dataset o
+    ON oi.order_id = o.order_id;
+
+/*
+Resultado:
+total_linhas: 112.650
+total_order_id_distinto: 98.666
+grain_item_por_pedido: 112.650
+total_product_id_distinto: 32.951
+total_price: 13.591.643,70
+
+Interpretação:
+O JOIN completo preservou integralmente o baseline de order_items.
+
+Os relacionamentos order_items → products e order_items → orders
+são compatíveis com cardinalidade N:1 nos dados observados.
+
+Não houve alteração do grain, perda ou multiplicação de linhas,
+e SUM(price) permaneceu igual ao baseline.
+
+Importante:
+Como order_items é a tabela base, o universo já está restrito aos
+98.666 pedidos que possuem ao menos um item. Os 775 pedidos sem
+itens existentes em orders não fazem parte dessa população.
+*/
+
+Quero que você produza, usando order_items → products:
+
+total de itens
+itens sem categoria válida
+
+pedidos distintos totais
+pedidos distintos com item sem categoria
+
+SUM(price) total
+SUM(price) associado a categoria ausente
+
+
+-- =========================================================
+-- 5. VALIDAÇÃO DE CATEGORIA DE PRODUTOS
+-- Objetivo:
+-- Validar a presença de categorias válidas nos produtos
+-- associados aos itens de pedido.
+-- =========================================================
+SELECT
+    COUNT(*) AS total_itens,
+    COUNT(
+    DISTINCT CASE
+        WHEN NULLIF(TRIM(p.product_category_name), '') IS NULL
+        THEN p.product_id
+    END
+    ) AS produtos_distintos_sem_categoria
+    SUM(
+        CASE
+            WHEN NULLIF(TRIM(p.product_category_name), '') IS NULL
+            THEN 1
+            ELSE 0
+        END
+    ) AS itens_sem_categoria_valida,
+    COUNT(DISTINCT oi.order_id) AS pedidos_distintos_totais,
+    COUNT(
+        DISTINCT CASE
+            WHEN NULLIF(TRIM(p.product_category_name), '') IS NULL
+            THEN oi.order_id
+        END
+    ) AS pedidos_distintos_com_item_sem_categoria,
+    SUM(oi.price) AS total_price,
+    SUM(
+        CASE
+            WHEN NULLIF(TRIM(p.product_category_name), '') IS NULL
+            THEN oi.price
+            ELSE 0
+        END
+    ) AS total_price_categoria_ausente,
+   	(100.0 *  SUM(
+        CASE
+            WHEN NULLIF(TRIM(p.product_category_name), '') IS NULL
+            THEN oi.price
+            ELSE 0
+        END
+    	) / nullif(SUM(oi.price), 0))::numeric(12,2) as percentual_total_price_sem_categoria  
+FROM olist_order_items_dataset oi
+LEFT JOIN olist_products_dataset p
+    ON oi.product_id = p.product_id;
+
+/*
+Resultado:
+total_itens: 112.650
+produtos_distintos_sem_categoria: 610
+itens_sem_categoria_valida: 1.603
+pedidos_distintos_totais: 98.666
+pedidos_distintos_com_item_sem_categoria: 1.451
+total_price: 13.591.643,70
+total_price_categoria_ausente: 179.535,28
+percentual_total_price_sem_categoria: 1,32%
+
+Interpretação:
+Foram encontrados 1.603 itens associados a produtos sem categoria válida. Esses itens somam 179.535,28, correspondendo a 1,32% do SUM(price) total.
+Isso demonstra que, Os 610 produtos com categoria ausente aparecem em 1.603 linhas de order_items, 
+distribuídas por 1.451 pedidos distintos. 
+Isso ocorre porque um mesmo produto pode aparecer em múltiplos itens e pedidos.
+*/
+
+
+
+
+
+
+
+
 
