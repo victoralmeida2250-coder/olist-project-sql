@@ -616,50 +616,184 @@ do processo e com order_status.
 */
 
 -- =========================================================
--- 11. RESUMO DA EXPLORAÇÃO
+-- 11. PERFIL DE NULIDADE E CARDINALIDADE DE ORDER_ITEMS
+-- Objetivo:
+-- Validar as principais colunas e a possível chave composta
+-- da tabela order_items.
+-- =========================================================
+
+SELECT
+    COUNT(*) AS total_linhas,
+
+    COUNT(*) - COUNT(order_id)
+        AS order_id_nulos,
+
+    COUNT(DISTINCT order_id)
+        AS pedidos_distintos,
+
+    COUNT(*) - COUNT(order_item_id)
+        AS order_item_id_nulos,
+
+    COUNT(DISTINCT order_item_id)
+        AS posicoes_de_item_distintas,
+
+    COUNT(*) - COUNT(product_id)
+        AS product_id_nulos,
+
+    COUNT(DISTINCT product_id)
+        AS produtos_distintos,
+
+    COUNT(*) - COUNT(seller_id)
+        AS seller_id_nulos,
+
+    COUNT(DISTINCT seller_id)
+        AS vendedores_distintos,
+
+    SUM(
+        CASE
+            WHEN order_id IS NULL
+              OR order_item_id IS NULL
+            THEN 1
+            ELSE 0
+        END
+    ) AS componentes_chave_nulos,
+
+    COUNT(
+        DISTINCT (order_id, order_item_id)
+    ) AS combinacoes_chave_distintas
+
+FROM olist_order_items_dataset;
+
+-- ========================================================
+-- 11.1. DUPLICIDADE DE ORDER_ITEMS (CHAVE COMPOSTA)
+-- Objetivo:
+-- Confirmar explicitamente a ausência de duplicatas para a chave
+-- composta (order_id, order_item_id).
+-- =========================================================
+
+SELECT
+    order_id,
+    order_item_id,
+    COUNT(*) AS ocorrencias
+FROM olist_order_items_dataset
+GROUP BY
+    order_id,
+    order_item_id
+HAVING COUNT(*) > 1;
+
+/*
+Interpretação:
+
+order_id e order_item_id não são únicos isoladamente.
+
+order_id se repete porque um pedido pode possuir múltiplos itens.
+
+order_item_id se repete porque representa a posição do item
+dentro do pedido e sua numeração recomeça em pedidos diferentes.
+
+A combinação (order_id, order_item_id) apresentou 112.650
+valores distintos em 112.650 linhas, sem componentes nulos
+e sem duplicidades observadas.
+
+Portanto, essa combinação é compatível com uma chave candidata
+composta nos dados analisados.
+
+Essa conclusão representa uma propriedade observada da fonte,
+não uma constraint declarada no banco.
+*/
+
+-- =========================================================
+-- 12. PERFIL DE NULIDADE E CARDINALIDADE DE PRODUCTS
+-- Objetivo:
+-- Validar unicidade de product_id e a cobertura dos principais
+-- atributos da tabela de produtos.
+-- =========================================================
+
+SELECT
+    COUNT(*) AS total_linhas,
+
+    COUNT(*) - COUNT(product_id)
+        AS product_id_nulos,
+
+    COUNT(DISTINCT product_id)
+        AS produtos_distintos,
+
+    SUM(
+        CASE
+            WHEN NULLIF(TRIM(product_category_name), '') IS NULL
+            THEN 1
+            ELSE 0
+        END
+    ) AS categorias_invalidas,
+
+    COUNT(*) - COUNT(product_name_lenght)
+        AS product_name_lenght_nulos,
+
+    COUNT(*) - COUNT(product_description_lenght)
+        AS product_description_lenght_nulos,
+
+    COUNT(*) - COUNT(product_photos_qty)
+        AS product_photos_qty_nulos,
+
+    COUNT(*) - COUNT(product_weight_g)
+        AS product_weight_g_nulos,
+
+    COUNT(*) - COUNT(product_length_cm)
+        AS product_length_cm_nulos,
+
+    COUNT(*) - COUNT(product_height_cm)
+        AS product_height_cm_nulos,
+
+    COUNT(*) - COUNT(product_width_cm)
+        AS product_width_cm_nulos
+
+FROM olist_products_dataset;
+
+/*
+Interpretação:
+
+product_id apresentou 32.951 valores distintos em 32.951 linhas,
+sem valores nulos, sendo compatível com uma chave candidata nos
+dados observados.
+
+Foram identificados 610 produtos sem categoria válida.
+
+As colunas product_name_lenght, product_description_lenght e
+product_photos_qty possuem 610 valores nulos cada.
+
+As colunas relacionadas a peso e dimensões possuem 2 valores
+nulos cada.
+
+A igualdade entre algumas contagens de nulos não prova, por si
+só, que os valores ausentes pertencem exatamente aos mesmos
+produtos.
+
+Nas análises por categoria, categorias ausentes foram preservadas
+e agrupadas como SEM_CATEGORIA.
+*/
+
+
+-- =========================================================
+-- 13. CONCLUSÃO DA EXPLORAÇÃO
 -- =========================================================
 
 /*
-RESUMO GERAL:
+A exploração identificou os grains e as chaves candidatas
+observadas nas três tabelas principais.
 
-Grains observados:
-- olist_orders_dataset:
-  uma linha por pedido, identificado por order_id.
-
-- olist_order_items_dataset:
-  uma linha por item dentro de um pedido.
-  A combinação (order_id, order_item_id) comporta-se como
-  chave candidata composta nos dados observados.
-
-- olist_products_dataset:
-  uma linha por produto, identificado por product_id.
-
-Integridade observada:
-- não foram encontrados order_id órfãos em order_items;
-- não foram encontrados product_id órfãos em order_items;
-- order_id é único e não nulo em orders;
-- product_id é único e não nulo em products;
-- a combinação (order_id, order_item_id) é única e não nula
-  em order_items.
-
-Pontos de atenção:
-- 775 pedidos em orders não possuem itens correspondentes;
-- a maior parte desses casos está nos status unavailable
-  e canceled, mas existem outros status;
+Principais pontos de atenção:
+- 775 pedidos não possuem itens correspondentes;
 - 610 produtos não possuem categoria válida;
-- meses nas extremidades do período podem ser parciais.
+- as bordas do período possuem meses-calendário parciais;
+- as relações e chaves observadas não representam
+  necessariamente constraints declaradas no banco.
 
-Conclusão:
-A estrutura e os relacionamentos observados são compatíveis
-com as análises planejadas, mas as métricas ainda precisam ser
-validadas antes e depois dos JOINs para garantir ausência de
-multiplicação ou perda indevida de linhas e valores.
+As validações de JOINs, população, grain e SUM(price) estão
+documentadas em 99_validacoes.sql.
 
-Próxima etapa:
-Executar validações de cardinalidade, contagem de linhas e soma
-de price no arquivo 99_validacoes.sql.
+O detalhamento das tabelas e colunas está disponível em
+data_dictionary.md.
 */
-
 
 
 
