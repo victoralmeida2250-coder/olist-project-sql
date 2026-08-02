@@ -545,10 +545,78 @@ declarada no PostgreSQL; significa apenas que não foram
 encontrados órfãos nos dados analisados.
 */
 
+-- =========================================================
+-- 10. PERFIL DE NULIDADE E CARDINALIDADE DE ORDERS
+-- Objetivo:
+-- Verificar nulidade das principais colunas operacionais e
+-- cardinalidade dos identificadores e status da tabela orders.
+--
+-- Grain da fonte:
+-- Uma linha por pedido.
+-- =========================================================
 
+SELECT
+    COUNT(*) AS total_linhas,
+
+    COUNT(*) - COUNT(customer_id)
+        AS customer_id_nulos,
+
+    COUNT(DISTINCT customer_id)
+        AS customer_id_distintos,
+
+    COUNT(*) - COUNT(order_status)
+        AS order_status_nulos,
+
+    COUNT(DISTINCT order_status)
+        AS status_distintos,
+
+    COUNT(*) - COUNT(order_purchase_timestamp)
+        AS purchase_timestamp_nulos,
+
+    COUNT(*) - COUNT(order_approved_at)
+        AS approved_at_nulos,
+
+    COUNT(*) - COUNT(order_delivered_carrier_date)
+        AS carrier_date_nulos,
+
+    COUNT(*) - COUNT(order_delivered_customer_date)
+        AS customer_date_nulos,
+
+    COUNT(*) - COUNT(order_estimated_delivery_date)
+        AS estimated_date_nulos
+
+FROM olist_orders_dataset;
+
+/*
+Resultado:
+total_linhas: 99.441
+customer_id_nulos: 0
+customer_id_distintos: 99.441
+order_status_nulos: 0
+status_distintos: 8
+purchase_timestamp_nulos: 0
+approved_at_nulos: 160
+carrier_date_nulos: 1.783
+customer_date_nulos: 2.965
+estimated_date_nulos: 0
+
+Interpretação:
+customer_id é único e não nulo dentro da tabela orders observada.
+Isso não significa necessariamente que existam 99.441 pessoas
+distintas, pois o identificador não deve ser interpretado
+automaticamente como uma chave permanente de cliente.
+
+As colunas order_approved_at, order_delivered_carrier_date e
+order_delivered_customer_date possuem valores nulos.
+
+Esses nulos não representam erros automaticamente, pois podem
+estar relacionados ao estágio operacional ou ao status do pedido.
+Uma conclusão de inconsistência exigiria cruzamento com as regras
+do processo e com order_status.
+*/
 
 -- =========================================================
--- 10. RESUMO DA EXPLORAÇÃO
+-- 11. RESUMO DA EXPLORAÇÃO
 -- =========================================================
 
 /*
@@ -591,6 +659,8 @@ Próxima etapa:
 Executar validações de cardinalidade, contagem de linhas e soma
 de price no arquivo 99_validacoes.sql.
 */
+
+
 
 
 
