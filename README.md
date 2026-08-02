@@ -1,8 +1,8 @@
 # O Detetive de Dados — Análise SQL com Olist
 
-Projeto final da Semana 1 do Bootcamp Analytics Engineering 4.0.
+## Dataset
 
-A análise utiliza PostgreSQL para explorar, validar e analisar dados de pedidos, itens e produtos do dataset Olist.
+Este projeto utiliza um subconjunto do Olist Brazilian E-Commerce Public Dataset, com foco nas tabelas de pedidos, itens de pedidos e produtos.
 
 ## Objetivo
 
@@ -63,6 +63,15 @@ README.md
 - Categorias nulas, vazias ou compostas apenas por espaços são tratadas como `SEM_CATEGORIA`.
 - Os meses de borda parcial foram retirados da comparação MoM.
 - Produtos são apresentados por `product_id`, pois a fonte não disponibiliza nomes comerciais.
+
+## Como executar
+
+1. Criar um banco PostgreSQL local.
+2. Importar as tabelas do dataset Olist utilizadas no projeto.
+3. Executar os arquivos SQL na ordem sugerida de leitura.
+4. Consultar a análise executiva em `docs/analise_1_pagina.md`.
+
+As queries foram desenvolvidas e testadas com PostgreSQL via DBeaver.
 
 ## Documentação
 
