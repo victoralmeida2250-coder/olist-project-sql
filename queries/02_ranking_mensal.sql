@@ -81,6 +81,7 @@ ORDER BY mes;
 -- Uma linha por mês.
 -- =========================================================
 -- Use junto com nossas cte.
+
 SELECT
     DATE_TRUNC('month', o.order_purchase_timestamp)::DATE AS mes,
     o.order_status AS status,
@@ -139,7 +140,7 @@ parciais.
 Essa regra é específica para a cobertura observada neste dataset
 e não deve ser aplicada automaticamente a outras fontes.
 
-/*
+COLUNAS: 
 mes:
 Mês-calendário representado pelo primeiro dia do mês.
 
